@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Qibla Finder - Kaaba Direction Compass</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card-bg: #161b22;
+            --text: #e6edf3;
+            --text-secondary: #8b949e;
+            --gold: #d4a843;
+            --gold-light: #f0d060;
+            --green: #00e676;
+            --green-glow: #00ff88;
+            --red: #ff5252;
+            --ring: #30363d;
+            --ring-active: #21262d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            font-family: 'Segoe UI', 'SF Pro Display', 'Helvetica Neue', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            min-height: 100dvh;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        .header h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+        .header .subtitle {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Compass wrapper */
+        .compass-container {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+        }
+
+        /* Glow ring behind compass */
+        .glow-ring {
+            position: absolute;
+            width: 310px;
+            height: 310px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1.2);
+            box-shadow:
+                0 0 0px rgba(0, 255, 136, 0),
+                0 0 0px rgba(0, 255, 136, 0),
+                inset 0 0 0px rgba(0, 255, 136, 0);
+            border: 3px solid transparent;
+        }
+        .glow-ring.active {
+            border-color: rgba(0, 255, 136, 0.6);
+            box-shadow:
+                0 0 25px rgba(0, 255, 136, 0.55),
+                0 0 60px rgba(0, 255, 136, 0.35),
+                0 0 100px rgba(0, 255, 136, 0.2),
+                inset 0 0 30px rgba(0, 255, 136, 0.15);
+            animation: glowPulse 1.2s ease-in-out infinite;
+        }
+        .glow-ring.perfect {
+            border-color: rgba(0, 255, 136, 0.9);
+            box-shadow:
+                0 0 35px rgba(0, 255, 136, 0.8),
+                0 0 80px rgba(0, 255, 136, 0.55),
+                0 0 130px rgba(0, 255, 136, 0.35),
+                0 0 180px rgba(0, 255, 136, 0.2),
+                inset 0 0 40px rgba(0, 255, 136, 0.25);
+            animation: glowPulseIntense 0.7s ease-in-out infinite;
+        }
+
+        @keyframes glowPulse {
+            0%,
+            100% {
+                box-shadow: 0 0 25px rgba(0, 255, 136, 0.55), 0 0 60px rgba(0, 255, 136, 0.35), 0 0 100px rgba(0, 255, 136, 0.2), inset 0 0 30px rgba(0, 255, 136, 0.15);
+            }
+            50% {
+                box-shadow: 0 0 40px rgba(0, 255, 136, 0.7), 0 0 80px rgba(0, 255, 136, 0.5), 0 0 120px rgba(0, 255, 136, 0.3), inset 0 0 45px rgba(0, 255, 136, 0.25);
+            }
+        }
+        @keyframes glowPulseIntense {
+            0%,
+            100% {
+                box-shadow: 0 0 35px rgba(0, 255, 136, 0.8), 0 0 80px rgba(0, 255, 136, 0.55), 0 0 130px rgba(0, 255, 136, 0.35), 0 0 180px rgba(0, 255, 136, 0.2), inset 0 0 40px rgba(0, 255, 136, 0.25);
+            }
+            50% {
+                box-shadow: 0 0 55px rgba(0, 255, 136, 0.95), 0 0 110px rgba(0, 255, 136, 0.7), 0 0 170px rgba(0, 255, 136, 0.5), 0 0 230px rgba(0, 255, 136, 0.3), inset 0 0 55px rgba(0, 255, 136, 0.4);
+            }
+        }
+
+        /* Canvas */
+        #compassCanvas {
+            position: relative;
+            z-index: 2;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5));
+        }
+
+        /* Info panel */
+        .info-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--ring);
+            border-radius: 16px;
+            padding: 16px 20px;
+            width: 100%;
+            max-width: 340px;
+            text-align: center;
+            transition: all 0.4s ease;
+        }
+        .info-panel.aligned {
+            border-color: rgba(0, 255, 136, 0.5);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.15);
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        .info-row .label {
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        .info-row .value {
+            font-weight: 600;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+            font-family: 'SF Mono', 'JetBrains Mono', 'Consolas', monospace;
+        }
+        .info-row .value.green {
+            color: var(--green);
+        }
+        .info-row .value.gold {
+            color: var(--gold-light);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-top: 4px;
+            transition: all 0.4s ease;
+        }
+        .status-badge.searching {
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+        }
+        .status-badge.aligned-badge {
+            background: rgba(0, 230, 118, 0.18);
+            color: #00e676;
+            animation: badgePulse 1.2s ease-in-out infinite;
+        }
+        .status-badge.error-badge {
+            background: rgba(255, 82, 82, 0.15);
+            color: #ff5252;
+        }
+        @keyframes badgePulse {
+            0%,
+            100% {
+                box-shadow: 0 0 0px rgba(0, 230, 118, 0);
+            }
+            50% {
+                box-shadow: 0 0 16px rgba(0, 230, 118, 0.4);
+            }
+        }
+
+        /* Permission button */
+        .permission-btn {
+            display: none;
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #1a6b3c, #15803d);
+            color: #fff;
+            border: none;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0, 180, 80, 0.3);
+        }
+        .permission-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(0, 200, 90, 0.45);
+            background: linear-gradient(135deg, #1e7a44, #16904a);
+        }
+        .permission-btn:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 8px rgba(0, 180, 80, 0.3);
+        }
+        .permission-btn.show {
+            display: block;
+            animation: fadeInUp 0.4s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Location status */
+        .location-status {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: center;
+            min-height: 18px;
+            transition: color 0.3s;
+        }
+        .location-status.success {
+            color: #4ade80;
+        }
+
+        /* Responsive */
+        @media (max-width: 380px) {
+            .compass-container {
+                width: 270px;
+                height: 270px;
+            }
+            #compassCanvas {
+                width: 250px;
+                height: 250px;
+            }
+            .glow-ring {
+                width: 260px;
+                height: 260px;
+            }
+            .info-panel {
+                max-width: 290px;
+                padding: 12px 16px;
+            }
+            .header h1 {
+                font-size: 1.3rem;
+            }
+        }
+        @media (max-width: 320px) {
+            .compass-container {
+                width: 240px;
+                height: 240px;
+            }
+            #compassCanvas {
+                width: 220px;
+                height: 220px;
+            }
+            .glow-ring {
+                width: 230px;
+                height: 230px;
+            }
+            .info-panel {
+                max-width: 260px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🕋 Qibla Finder</h1>
+            <p class="subtitle">Kaaba Direction Compass</p>
+        </div>
+
+        <div class="compass-container" id="compassContainer">
+            <div class="glow-ring" id="glowRing"></div>
+            <canvas id="compassCanvas" width="600" height="600" aria-label="Qibla Direction Compass"></canvas>
+        </div>
+
+        <div class="info-panel" id="infoPanel">
+            <div class="info-row">
+                <span class="label">📍 Qibla Bearing</span>
+                <span class="value gold" id="qiblaBearingDisplay">--°</span>
+            </div>
+            <div class="info-row">
+                <span class="label">🧭 Current Heading</span>
+                <span class="value" id="currentHeadingDisplay">--°</span>
+            </div>
+            <div class="info-row">
+                <span class="label">🎯 Deviation</span>
+                <span class="value" id="deviationDisplay">--°</span>
+            </div>
+            <span class="status-badge searching" id="statusBadge">SEARCHING</span>
+        </div>
+
+        <button class="permission-btn" id="permissionBtn" title="Enable Compass">
+            🧭 Enable Compass
+        </button>
+        <p class="location-status" id="locationStatus">Detecting location...</p>
+    </div>
+
+    <script>
+        (function() {
+            // ============ DOM ELEMENTS ============
+            const canvas = document.getElementById('compassCanvas');
+            const ctx = canvas.getContext('2d');
+            const glowRing = document.getElementById('glowRing');
+            const infoPanel = document.getElementById('infoPanel');
+            const statusBadge = document.getElementById('statusBadge');
+            const permissionBtn = document.getElementById('permissionBtn');
+            const locationStatus = document.getElementById('locationStatus');
+            const qiblaBearingDisplay = document.getElementById('qiblaBearingDisplay');
+            const currentHeadingDisplay = document.getElementById('currentHeadingDisplay');
+            const deviationDisplay = document.getElementById('deviationDisplay');
+
+            // ============ STATE ============
+            const KAABA_LAT = 21.4225;
+            const KAABA_LNG = 39.8262;
+            const ALIGN_TOLERANCE = 5; // degrees for green light
+            const PERFECT_TOLERANCE = 2; // degrees for intense green
+
+            let userLat = null;
+            let userLng = null;
+            let qiblaBearing = null; // degrees from True North
+            let rawHeading = null; // device compass heading
+            let smoothHeading = null; // smoothed heading for display
+            let headingAvailable = false;
+            let locationReady = false;
+            let permissionGranted = false;
+            let animFrameId = null;
+
+            // ============ CANVAS SETUP ============
+            const CANVAS_SIZE = 600;
+            const CENTER = CANVAS_SIZE / 2;
+            const OUTER_RADIUS = 280;
+            const DIAL_RADIUS = 255;
+            const TICK_OUTER = DIAL_RADIUS - 8;
+            const TICK_INNER_MAJOR = TICK_OUTER - 32;
+            const TICK_INNER_MINOR = TICK_OUTER - 18;
+            const TICK_INNER_SMALL = TICK_OUTER - 12;
+            const LABEL_RADIUS = TICK_OUTER - 50;
+            const INTERCARDINAL_RADIUS = TICK_OUTER - 42;
+
+            // ============ BEARING CALCULATION ============
+            function toRad(deg) { return deg * Math.PI / 180; }
+
+            function toDeg(rad) { return rad * 180 / Math.PI; }
+
+            function calculateQiblaBearing(lat, lng) {
+                const phi1 = toRad(lat);
+                const lambda1 = toRad(lng);
+                const phi2 = toRad(KAABA_LAT);
+                const lambda2 = toRad(KAABA_LNG);
+                const deltaLambda = lambda2 - lambda1;
+                const y = Math.sin(deltaLambda) * Math.cos(phi2);
+                const x = Math.cos(phi1) * Math.sin(phi2) -
+                    Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
+                let bearing = toDeg(Math.atan2(y, x));
+                bearing = (bearing + 360) % 360;
+                return bearing;
+            }
+
+            function angularDiff(a, b) {
+                let diff = Math.abs(a - b) % 360;
+                if (diff > 180) diff = 360 - diff;
+                return diff;
+            }
+
+            // ============ GEOLOCATION ============
+            function getLocation() {
+                locationStatus.textContent = 'Detecting location...';
+                locationStatus.className = 'location-status';
+                if (!navigator.geolocation) {
+                    locationStatus.textContent = '⚠️ Geolocation not supported by this browser';
+                    locationStatus.className = 'location-status';
+                    statusBadge.textContent = 'NO GPS';
+                    statusBadge.className = 'status-badge error-badge';
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        userLat = pos.coords.latitude;
+                        userLng = pos.coords.longitude;
+                        qiblaBearing = calculateQiblaBearing(userLat, userLng);
+                        locationReady = true;
+                        locationStatus.textContent =
+                            `📍 Location: ${userLat.toFixed(4)}°, ${userLng.toFixed(4)}° | Qibla: ${qiblaBearing.toFixed(1)}°`;
+                        locationStatus.className = 'location-status success';
+                        qiblaBearingDisplay.textContent = qiblaBearing.toFixed(1) + '°';
+                        updateUI();
+                    },
+                    (err) => {
+                        console.warn('Geolocation error:', err);
+                        locationStatus.textContent = '⚠️ Unable to detect location. Please allow location access.';
+                        locationStatus.className = 'location-status';
+                        statusBadge.textContent = 'NO GPS';
+                        statusBadge.className = 'status-badge error-badge';
+                        // Fallback: use a default approximate bearing (e.g., from London ~119°)
+                        // Better to show error than wrong direction
+                    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 }
+                );
+            }
+
+            // ============ DEVICE ORIENTATION ============
+            function setupOrientationListeners() {
+                // Prefer absolute orientation
+                if ('ondeviceorientationabsolute' in window) {
+                    window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+                    console.log('Using deviceorientationabsolute');
+                }
+                // Also listen for regular deviceorientation as fallback
+                window.addEventListener('deviceorientation', handleOrientation, true);
+            }
+
+            function handleOrientation(event) {
+                if (!permissionGranted && needsPermission()) return;
+
+                let heading = null;
+
+                // iOS-style: webkitCompassHeading
+                if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
+                    heading = event.webkitCompassHeading;
+                }
+                // Android/standard: use alpha if absolute
+                else if (event.absolute === true && event.alpha !== null) {
+                    heading = event.alpha;
+                }
+                // Fallback: use alpha even if not marked absolute (some Android devices)
+                else if (event.alpha !== null && event.absolute !== false) {
+                    heading = event.alpha;
+                }
+                // On some devices, alpha is relative to initial orientation
+                // We still use it as best guess
+                else if (event.alpha !== null) {
+                    heading = event.alpha;
+                }
+
+                if (heading !== null && !isNaN(heading)) {
+                    // Normalize to 0-360
+                    heading = heading % 360;
+                    if (heading < 0) heading += 360;
+                    rawHeading = heading;
+                    if (smoothHeading === null) smoothHeading = heading;
+                    headingAvailable = true;
+                    updateUI();
+                }
+            }
+
+            function needsPermission() {
+                // iOS 13+ requires explicit permission
+                return typeof DeviceOrientationEvent !== 'undefined' &&
+                    typeof DeviceOrientationEvent.requestPermission === 'function';
+            }
+
+            async function requestPermission() {
+                if (!needsPermission()) {
+                    permissionGranted = true;
+                    setupOrientationListeners();
+                    permissionBtn.classList.remove('show');
+                    return;
+                }
+                try {
+                    const response = await DeviceOrientationEvent.requestPermission();
+                    if (response === 'granted') {
+                        permissionGranted = true;
+                        setupOrientationListeners();
+                        permissionBtn.classList.remove('show');
+                        statusBadge.textContent = 'COMPASS ACTIVE';
+                        statusBadge.className = 'status-badge searching';
+                        console.log('Device orientation permission granted');
+                    } else {
+                        alert('Compass permission denied. Cannot determine Qibla direction.');
+                        statusBadge.textContent = 'PERMISSION DENIED';
+                        statusBadge.className = 'status-badge error-badge';
+                    }
+                } catch (err) {
+                    console.error('Permission request error:', err);
+                    statusBadge.textContent = 'ERROR';
+                    statusBadge.className = 'status-badge error-badge';
+                }
+            }
+
+            // ============ UI UPDATE ============
+            function updateUI() {
+                if (headingAvailable && locationReady && qiblaBearing !== null && smoothHeading !== null) {
+                    const deviation = angularDiff(smoothHeading, qiblaBearing);
+                    currentHeadingDisplay.textContent = smoothHeading.toFixed(1) + '°';
+                    deviationDisplay.textContent = deviation.toFixed(1) + '°';
+
+                    if (deviation <= PERFECT_TOLERANCE) {
+                        glowRing.classList.add('active', 'perfect');
+                        infoPanel.classList.add('aligned');
+                        statusBadge.textContent = '✅ PERFECTLY ALIGNED';
+                        statusBadge.className = 'status-badge aligned-badge';
+                        deviationDisplay.className = 'value green';
+                    } else if (deviation <= ALIGN_TOLERANCE) {
+                        glowRing.classList.add('active');
+                        glowRing.classList.remove('perfect');
+                        infoPanel.classList.add('aligned');
+                        statusBadge.textContent = '🟢 ALIGNED - QIBLA FOUND';
+                        statusBadge.className = 'status-badge aligned-badge';
+                        deviationDisplay.className = 'value green';
+                    } else {
+                        glowRing.classList.remove('active', 'perfect');
+                        infoPanel.classList.remove('aligned');
+                        statusBadge.textContent = '🧭 TURN TO FIND QIBLA';
+                        statusBadge.className = 'status-badge searching';
+                        deviationDisplay.className = 'value';
+                    }
+                } else if (!locationReady) {
+                    statusBadge.textContent = '📍 ACQUIRING GPS';
+                    statusBadge.className = 'status-badge searching';
+                } else if (!headingAvailable) {
+                    statusBadge.textContent = '🧭 WAITING FOR COMPASS';
+                    statusBadge.className = 'status-badge searching';
+                }
+            }
+
+            // ============ CANVAS DRAWING ============
+            function drawCompass() {
+                ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+                const heading = smoothHeading || 0;
+                const dialRotation = -heading; // in degrees, for rotating the compass dial
+
+                // --- Outer shadow ring ---
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(CENTER, CENTER, OUTER_RADIUS + 6, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0,0,0,0.35)';
+                ctx.fill();
+                ctx.restore();
+
+                // --- Outer bezel ---
+                const bezelGrad = ctx.createRadialGradient(CENTER - 20, CENTER - 20, OUTER_RADIUS - 30, CENTER, CENTER,
+                    OUTER_RADIUS + 2);
+                bezelGrad.addColorStop(0, '#4a4a5a');
+                bezelGrad.addColorStop(0.5, '#2a2a38');
+                bezelGrad.addColorStop(0.85, '#1a1a28');
+                bezelGrad.addColorStop(1, '#3a3a4a');
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(CENTER, CENTER, OUTER_RADIUS + 1, 0, Math.PI * 2);
+                ctx.fillStyle = bezelGrad;
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(180,160,120,0.4)';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+                ctx.restore();
+
+                // --- Inner dark face (rotates) ---
+                ctx.save();
+                ctx.translate(CENTER, CENTER);
+                ctx.rotate(toRad(dialRotation));
+
+                // Dark dial background
+                const faceGrad = ctx.createRadialGradient(0, 0, DIAL_RADIUS - 40, 0, 0, DIAL_RADIUS);
+                faceGrad.addColorStop(0, '#1e1e30');
+                faceGrad.addColorStop(1, '#141420');
+                ctx.beginPath();
+                ctx.arc(0, 0, DIAL_RADIUS, 0, Math.PI * 2);
+                ctx.fillStyle = faceGrad;
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(200,180,150,0.25)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // --- Tick marks ---
+                for (let deg = 0; deg < 360; deg += 2) {
+                    const rad = toRad(deg);
+                    const isMajor = deg % 90 === 0;
+                    const isMinor = deg % 30 === 0 && !isMajor;
+                    const isSmall = deg % 10 === 0 && !isMajor && !isMinor;
+
+                    let innerRadius;
+                    let lineWidth;
+                    let alpha;
+
+                    if (isMajor) {
+                        innerRadius = TICK_INNER_MAJOR;
+                        lineWidth = 2.8;
+                        alpha = 0.9;
+                    } else if (isMinor) {
+                        innerRadius = TICK_INNER_MINOR;
+                        lineWidth = 1.8;
+                        alpha = 0.65;
+                    } else if (isSmall) {
+                        innerRadius = TICK_INNER_SMALL;
+                        lineWidth = 0.8;
+                        alpha = 0.35;
+                    } else {
+                        continue;
+                    }
+
+                    const x1 = Math.cos(rad) * TICK_OUTER;
+                    const y1 = Math.sin(rad) * TICK_OUTER;
+                    const x2 = Math.cos(rad) * innerRadius;
+                    const y2 = Math.sin(rad) * innerRadius;
+
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.strokeStyle = `rgba(220,215,200,${alpha})`;
+                    ctx.lineWidth = lineWidth;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                }
+
+                // --- Cardinal labels (counter-rotated to stay upright) ---
+                const cardinals = [
+                    { angle: 0, label: 'N', color: '#ff6b6b', size: 20, weight: '800' },
+                    { angle: 90, label: 'E', color: '#e0e0e0', size: 17, weight: '600' },
+                    { angle: 180, label: 'S', color: '#e0e0e0', size: 17, weight: '600' },
+                    { angle: 270, label: 'W', color: '#e0e0e0', size: 17, weight: '600' },
+                ];
+
+                cardinals.forEach(card => {
+                    ctx.save();
+                    const rad = toRad(card.angle);
+                    const lx = Math.cos(rad) * LABEL_RADIUS;
+                    const ly = Math.sin(rad) * LABEL_RADIUS;
+                    ctx.translate(lx, ly);
+                    // Counter-rotate so text stays upright relative to screen
+                    ctx.rotate(toRad(-dialRotation - card.angle));
+                    ctx.fillStyle = card.color;
+                    ctx.font = `${card.weight} ${card.size}px "Segoe UI","SF Pro Display","Helvetica Neue",sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(card.label, 0, 0);
+                    ctx.restore();
+                });
+
+                // --- Intercardinal labels ---
+                const intercardinals = [
+                    { angle: 45, label: 'NE' },
+                    { angle: 135, label: 'SE' },
+                    { angle: 225, label: 'SW' },
+                    { angle: 315, label: 'NW' },
+                ];
+
+                intercardinals.forEach(ic => {
+                    ctx.save();
+                    const rad = toRad(ic.angle);
+                    const lx = Math.cos(rad) * INTERCARDINAL_RADIUS;
+                    const ly = Math.sin(rad) * INTERCARDINAL_RADIUS;
+                    ctx.translate(lx, ly);
+                    ctx.rotate(toRad(-dialRotation - ic.angle));
+                    ctx.fillStyle = 'rgba(180,175,165,0.7)';
+                    ctx.font = '600 11px "Segoe UI","SF Pro Display","Helvetica Neue",sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(ic.label, 0, 0);
+                    ctx.restore();
+                });
+
+                // --- Qibla marker ---
+                if (qiblaBearing !== null) {
+                    const qRad = toRad(qiblaBearing);
+                    const qx = Math.cos(qRad) * (TICK_OUTER - 16);
+                    const qy = Math.sin(qRad) * (TICK_OUTER - 16);
+
+                    // Glow behind Qibla marker
+                    ctx.save();
+                    const glowGrad = ctx.createRadialGradient(qx, qy, 4, qx, qy, 22);
+                    glowGrad.addColorStop(0, 'rgba(240,200,80,0.9)');
+                    glowGrad.addColorStop(0.5, 'rgba(240,180,40,0.4)');
+                    glowGrad.addColorStop(1, 'rgba(240,160,20,0)');
+                    ctx.fillStyle = glowGrad;
+                    ctx.beginPath();
+                    ctx.arc(qx, qy, 22, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+
+                    // Kaaba icon / diamond marker
+                    ctx.save();
+                    ctx.translate(qx, qy);
+                    const diamondSize = 11;
+                    ctx.fillStyle = '#f0c840';
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.shadowColor = 'rgba(240,200,60,0.8)';
+                    ctx.shadowBlur = 12;
+                    ctx.beginPath();
+                    ctx.moveTo(0, -diamondSize);
+                    ctx.lineTo(diamondSize * 0.7, 0);
+                    ctx.lineTo(0, diamondSize);
+                    ctx.lineTo(-diamondSize * 0.7, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+
+                    // Small inner dot
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+
+                    // Small label
+                    ctx.save();
+                    const labelQx = Math.cos(qRad) * (TICK_OUTER + 16);
+                    const labelQy = Math.sin(qRad) * (TICK_OUTER + 16);
+                    ctx.translate(labelQx, labelQy);
+                    ctx.rotate(toRad(-dialRotation - qiblaBearing));
+                    ctx.fillStyle = '#f0c840';
+                    ctx.font = '700 10px "Segoe UI","SF Pro Display","Helvetica Neue",sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🕋', 0, 0);
+                    ctx.restore();
+                }
+
+                ctx.restore(); // End dial rotation
+
+                // --- Fixed pointer at top ---
+                ctx.save();
+                const pointerY = CENTER - OUTER_RADIUS + 8;
+                const pointerSize = 18;
+                const pointerGrad = ctx.createLinearGradient(CENTER, pointerY - pointerSize, CENTER, pointerY +
+                pointerSize);
+                pointerGrad.addColorStop(0, '#ffffff');
+                pointerGrad.addColorStop(1, '#c0c0d0');
+                ctx.fillStyle = pointerGrad;
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                ctx.lineWidth = 1.5;
+                ctx.shadowColor = 'rgba(255,255,255,0.5)';
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.moveTo(CENTER, pointerY - pointerSize);
+                ctx.lineTo(CENTER - pointerSize * 0.6, pointerY + pointerSize * 0.5);
+                ctx.lineTo(CENTER + pointerSize * 0.6, pointerY + pointerSize * 0.5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                ctx.restore();
+
+                // --- Center dot ---
+                ctx.save();
+                const centerDotGrad = ctx.createRadialGradient(CENTER, CENTER, 1, CENTER, CENTER, 9);
+                centerDotGrad.addColorStop(0, '#fff');
+                centerDotGrad.addColorStop(0.6, '#d0d0d0');
+                centerDotGrad.addColorStop(1, 'rgba(100,100,120,0)');
+                ctx.fillStyle = centerDotGrad;
+                ctx.beginPath();
+                ctx.arc(CENTER, CENTER, 9, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#1a1a28';
+                ctx.beginPath();
+                ctx.arc(CENTER, CENTER, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // --- Qibla bearing arc indicator on outer ring ---
+                if (qiblaBearing !== null && headingAvailable && smoothHeading !== null) {
+                    ctx.save();
+                    ctx.translate(CENTER, CENTER);
+                    // Small arc showing the qibla direction on the very outer edge
+                    const arcRadius = OUTER_RADIUS - 4;
+                    const qiblaRad = toRad(qiblaBearing);
+                    const arcStart = qiblaRad - toRad(4);
+                    const arcEnd = qiblaRad + toRad(4);
+                    ctx.beginPath();
+                    ctx.arc(0, 0, arcRadius, arcStart, arcEnd);
+                    ctx.strokeStyle = 'rgba(240,200,60,0.7)';
+                    ctx.lineWidth = 5;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+
+            // ============ ANIMATION LOOP ============
+            function animate() {
+                // Smooth the heading
+                if (rawHeading !== null && smoothHeading !== null) {
+                    // Handle angle wrapping for smoothing
+                    let diff = rawHeading - smoothHeading;
+                    if (diff > 180) diff -= 360;
+                    if (diff < -180) diff += 360;
+                    smoothHeading += diff * 0.2; // Smoothing factor
+                    if (smoothHeading < 0) smoothHeading += 360;
+                    if (smoothHeading >= 360) smoothHeading -= 360;
+                } else if (rawHeading !== null && smoothHeading === null) {
+                    smoothHeading = rawHeading;
+                }
+
+                drawCompass();
+                if (headingAvailable && locationReady) {
+                    updateUI();
+                }
+                animFrameId = requestAnimationFrame(animate);
+            }
+
+            // ============ INITIALIZATION ============
+            function init() {
+                getLocation();
+                if (needsPermission()) {
+                    permissionBtn.classList.add('show');
+                    permissionBtn.addEventListener('click', requestPermission);
+                } else {
+                    permissionGranted = true;
+                    setupOrientationListeners();
+                    permissionBtn.classList.remove('show');
+                }
+                // Start animation loop
+                animate();
+            }
+
+            // ============ HANDLE RESIZE / VISIBILITY ============
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    if (animFrameId) cancelAnimationFrame(animFrameId);
+                    animFrameId = null;
+                } else {
+                    if (!animFrameId) animate();
+                }
+            });
+
+            // ============ START ============
+            init();
+
+            // Log info
+            console.log('🕋 Qibla Finder Compass initialized');
+            console.log('Kaaba coordinates:', KAABA_LAT + '°N,', KAABA_LNG + '°E');
+            if (needsPermission()) {
+                console.log('iOS detected - compass permission required');
+            }
+        })();
+    </script>
+</body>
+</html>
